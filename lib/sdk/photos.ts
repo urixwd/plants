@@ -6,6 +6,41 @@ import type {
 
 export class PhotosSDK {
   /**
+   * Transform camelCase TypeScript properties to snake_case database columns
+   */
+  private static transformToDatabase(photo: any): any {
+    const result: any = {}
+
+    if (photo.id !== undefined) result.id = photo.id
+    if (photo.plantInstanceId !== undefined) result.plant_instance_id = photo.plantInstanceId
+    if (photo.photoUrl !== undefined) result.photo_url = photo.photoUrl
+    if (photo.caption !== undefined) result.caption = photo.caption
+    if (photo.photoDate !== undefined) result.photo_date = photo.photoDate
+    if (photo.isMainPhoto !== undefined) result.is_main_photo = photo.isMainPhoto
+    if (photo.createdAt !== undefined) result.created_at = photo.createdAt
+    if (photo.updatedAt !== undefined) result.updated_at = photo.updatedAt
+
+    return result
+  }
+
+  /**
+   * Transform snake_case database columns to camelCase TypeScript properties
+   */
+  private static transformFromDatabase(photo: any): any {
+    return {
+      idAuto: photo.id_auto,
+      id: photo.id,
+      plantInstanceId: photo.plant_instance_id,
+      photoUrl: photo.photo_url,
+      caption: photo.caption,
+      photoDate: photo.photo_date,
+      isMainPhoto: photo.is_main_photo,
+      createdAt: photo.created_at,
+      updatedAt: photo.updated_at,
+    }
+  }
+
+  /**
    * Upload a photo to Supabase Storage and save record
    */
   static async upload(
@@ -16,47 +51,24 @@ export class PhotosSDK {
       isMainPhoto?: boolean
     } = {}
   ): Promise<PlantPhoto> {
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${plantInstanceId}/${Date.now()}.${fileExt}`
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('plantInstanceId', plantInstanceId)
+    if (options.caption) formData.append('caption', options.caption)
+    formData.append('isMainPhoto', String(options.isMainPhoto || false))
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('plant-photos')
-      .upload(fileName, file)
+    const response = await fetch('/api/photos/upload', {
+      method: 'POST',
+      body: formData,
+    })
 
-    if (uploadError) throw uploadError
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('plant-photos')
-      .getPublicUrl(uploadData.path)
-
-    // If this is a main photo, unset any existing main photo first
-    if (options.isMainPhoto) {
-      await supabase
-        .from('plant_photos')
-        .update({ is_main_photo: false })
-        .eq('plant_instance_id', plantInstanceId)
-        .eq('is_main_photo', true)
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to upload photo')
     }
 
-    // Save photo record to database
-    const photoRecord: InsertPlantPhoto = {
-      plantInstanceId,
-      photoUrl: urlData.publicUrl,
-      caption: options.caption,
-      isMainPhoto: options.isMainPhoto || false,
-    }
-
-    const { data, error } = await supabase
-      .from('plant_photos')
-      .insert(photoRecord)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
+    const { photo } = await response.json()
+    return photo
   }
 
   /**
@@ -71,7 +83,7 @@ export class PhotosSDK {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data || []
+    return (data || []).map(photo => this.transformFromDatabase(photo))
   }
 
   /**
@@ -86,7 +98,7 @@ export class PhotosSDK {
       .single()
 
     if (error && error.code !== 'PGRST116') throw error
-    return data || null
+    return data ? this.transformFromDatabase(data) : null
   }
 
   /**
@@ -109,7 +121,7 @@ export class PhotosSDK {
       .single()
 
     if (error) throw error
-    return data
+    return this.transformFromDatabase(data)
   }
 
   /**
@@ -124,7 +136,7 @@ export class PhotosSDK {
       .single()
 
     if (error) throw error
-    return data
+    return this.transformFromDatabase(data)
   }
 
   /**
@@ -178,7 +190,7 @@ export class PhotosSDK {
       .limit(limit)
 
     if (error) throw error
-    return data || []
+    return (data || []).map(photo => this.transformFromDatabase(photo))
   }
 
   /**

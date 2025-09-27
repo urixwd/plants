@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CareEventsSDK, PhotosSDK } from "@/lib/sdk";
 import type { PlantInstanceWithPlant } from "@/lib/sdk";
 
@@ -29,6 +29,25 @@ export function PlantCard({
   const router = useRouter();
   const [isWatering, setIsWatering] = useState(false);
   const [lastWatering, setLastWatering] = useState<Date | null>(null);
+  const [mainPhotoUrl, setMainPhotoUrl] = useState<string | null>(null);
+
+  // Load main photo for avatar and last watering
+  useEffect(() => {
+    const loadPlantData = async () => {
+      try {
+        const [mainPhoto, lastWateringDate] = await Promise.all([
+          PhotosSDK.getMainPhoto(plantInstance.id),
+          CareEventsSDK.getLastWatering(plantInstance.id)
+        ]);
+        setMainPhotoUrl(mainPhoto?.photoUrl || null);
+        setLastWatering(lastWateringDate);
+      } catch (error) {
+        console.error('Failed to load plant data:', error);
+      }
+    };
+
+    loadPlantData();
+  }, [plantInstance.id]);
 
   // Get health status color
   const getHealthColor = (status: string) => {
@@ -93,12 +112,26 @@ export function PlantCard({
     return "🪴";
   };
 
+  // Format relative time for last watering
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
   return (
     <Card className="w-full max-w-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
+              {mainPhotoUrl && <AvatarImage src={mainPhotoUrl} alt="Plant photo" />}
               <AvatarFallback>{getPlantEmoji()}</AvatarFallback>
             </Avatar>
             <div>
@@ -143,7 +176,10 @@ export function PlantCard({
         <div className="flex justify-between items-center text-sm">
           <span className="text-earth-600">Last watered:</span>
           <span className="font-medium text-primary-600">
-            {lastWatering ? "Just now" : "Loading..."}
+            {lastWatering
+              ? formatRelativeTime(lastWatering)
+              : "Never"
+            }
           </span>
         </div>
 

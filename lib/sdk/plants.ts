@@ -83,12 +83,7 @@ export class PlantsSDK {
     const { data, error } = await supabase
       .from('plants')
       .select('*')
-      .or(`
-        scientific_name.ilike.%${query}%,
-        english_name.ilike.%${query}%,
-        spanish_name.ilike.%${query}%,
-        hebrew_name.ilike.%${query}%
-      `)
+      .or(`scientific_name.ilike.%${query}%,english_name.ilike.%${query}%,spanish_name.ilike.%${query}%,hebrew_name.ilike.%${query}%`)
       .order('english_name', { ascending: true })
 
     if (error) throw error

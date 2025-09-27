@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,12 +30,59 @@ export function PlantForm({ plant, onSubmit, onCancel, isLoading }: PlantFormPro
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Plant[]>([])
+  const [selectedPlant, setSelectedPlant] = useState<Plant | null>(plant || null)
+  const [showResults, setShowResults] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+
+  // Search for plants
+  useEffect(() => {
+    const searchPlants = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([])
+        setShowResults(false)
+        return
+      }
+
+      try {
+        const plants = await PlantsSDK.search(searchQuery)
+        setSearchResults(plants)
+        setShowResults(true)
+      } catch (error) {
+        console.error('Error searching plants:', error)
+        setSearchResults([])
+      }
+    }
+
+    const debounceTimer = setTimeout(searchPlants, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [searchQuery])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleInputChange = (
     field: keyof InsertPlantInstance,
     value: string | number
   ) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handlePlantSelect = (plant: Plant) => {
+    setSelectedPlant(plant)
+    setFormData(prev => ({ ...prev, plantId: plant.id }))
+    setSearchQuery(plant.englishName || plant.scientificName)
+    setShowResults(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,16 +138,66 @@ export function PlantForm({ plant, onSubmit, onCancel, isLoading }: PlantFormPro
         <CardContent className="space-y-4">
           {/* Plant Selection - if no plant provided */}
           {!plant && (
-            <div>
+            <div ref={searchRef} className="relative">
               <label className="block text-sm font-medium text-earth-700 mb-1">
                 Plant Type *
               </label>
               <Input
                 placeholder="Search for a plant type..."
-                value={formData.plantId}
-                onChange={(e) => handleInputChange('plantId', e.target.value)}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
                 required
               />
+
+              {/* Search Results Dropdown */}
+              {showResults && searchResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-earth-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {searchResults.map((plant) => (
+                    <div
+                      key={plant.id}
+                      onClick={() => handlePlantSelect(plant)}
+                      className="px-4 py-2 hover:bg-earth-50 cursor-pointer border-b border-earth-100 last:border-b-0"
+                    >
+                      <div className="font-medium text-earth-800">
+                        {plant.englishName}
+                      </div>
+                      <div className="text-sm text-earth-600 italic">
+                        {plant.scientificName}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Show selected plant */}
+              {selectedPlant && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium text-green-800">
+                        {selectedPlant.englishName}
+                      </div>
+                      <div className="text-sm text-green-600 italic">
+                        {selectedPlant.scientificName}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPlant(null)
+                        setFormData(prev => ({ ...prev, plantId: '' }))
+                        setSearchQuery('')
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-earth-500 mt-1">
                 Start typing to search the botanical database
               </p>

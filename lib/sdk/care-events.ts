@@ -7,6 +7,45 @@ import type {
 
 export class CareEventsSDK {
   /**
+   * Transform camelCase TypeScript properties to snake_case database columns
+   */
+  private static transformToDatabase(event: any): any {
+    const result: any = {}
+
+    if (event.id !== undefined) result.id = event.id
+    if (event.plantInstanceId !== undefined) result.plant_instance_id = event.plantInstanceId
+    if (event.eventType !== undefined) result.event_type = event.eventType
+    if (event.eventDate !== undefined) result.event_date = event.eventDate
+    if (event.notes !== undefined) result.notes = event.notes
+    if (event.waterAmount !== undefined) result.water_amount = event.waterAmount
+    if (event.fertilizerType !== undefined) result.fertilizer_type = event.fertilizerType
+    if (event.photoUrls !== undefined) result.photo_urls = event.photoUrls
+    if (event.createdAt !== undefined) result.created_at = event.createdAt
+    if (event.updatedAt !== undefined) result.updated_at = event.updatedAt
+
+    return result
+  }
+
+  /**
+   * Transform snake_case database columns to camelCase TypeScript properties
+   */
+  private static transformFromDatabase(event: any): any {
+    return {
+      idAuto: event.id_auto,
+      id: event.id,
+      plantInstanceId: event.plant_instance_id,
+      eventType: event.event_type,
+      eventDate: event.event_date,
+      notes: event.notes,
+      waterAmount: event.water_amount,
+      fertilizerType: event.fertilizer_type,
+      photoUrls: event.photo_urls,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at,
+    }
+  }
+
+  /**
    * Log a new care event
    */
   static async log(
@@ -19,7 +58,7 @@ export class CareEventsSDK {
       photoUrls?: string[]
     }
   ): Promise<PlantCareEvent> {
-    const careEvent: InsertPlantCareEvent = {
+    const careEvent = {
       plantInstanceId,
       eventType: event.type,
       eventDate: new Date().toISOString().split('T')[0], // Today's date
@@ -29,13 +68,19 @@ export class CareEventsSDK {
       photoUrls: event.photoUrls,
     }
 
+    const dbCareEvent = this.transformToDatabase(careEvent)
+    console.log('🐛 Care event for database:', dbCareEvent)
+
     const { data, error } = await supabase
       .from('plant_care_events')
-      .insert(careEvent)
+      .insert(dbCareEvent)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('🐛 Care event insert error:', error)
+      throw error
+    }
 
     // Update plant instance's updated_at timestamp to track last activity
     await supabase
@@ -43,7 +88,7 @@ export class CareEventsSDK {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', plantInstanceId)
 
-    return data
+    return this.transformFromDatabase(data)
   }
 
   /**
@@ -62,7 +107,7 @@ export class CareEventsSDK {
       .limit(limit)
 
     if (error) throw error
-    return data || []
+    return (data || []).map(event => this.transformFromDatabase(event))
   }
 
   /**

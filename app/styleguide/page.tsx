@@ -305,16 +305,31 @@ export default function StyleGuidePage() {
       {/* Avatars */}
       <section className="space-y-6">
         <h2 className="text-3xl font-semibold text-primary-700">Avatars</h2>
-        <div className="flex items-center space-x-4">
-          <Avatar>
-            <AvatarFallback>🌿</AvatarFallback>
-          </Avatar>
-          <Avatar>
-            <AvatarFallback>🌱</AvatarFallback>
-          </Avatar>
-          <Avatar>
-            <AvatarFallback>🪴</AvatarFallback>
-          </Avatar>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="text-center space-y-2">
+              <Avatar>
+                <AvatarImage src="https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=100&h=100&fit=crop&crop=center" alt="Plant photo" />
+                <AvatarFallback>🌿</AvatarFallback>
+              </Avatar>
+              <p className="text-xs text-earth-600">With image</p>
+            </div>
+            <div className="text-center space-y-2">
+              <Avatar>
+                <AvatarFallback>🌱</AvatarFallback>
+              </Avatar>
+              <p className="text-xs text-earth-600">Emoji fallback</p>
+            </div>
+            <div className="text-center space-y-2">
+              <Avatar>
+                <AvatarFallback>🪴</AvatarFallback>
+              </Avatar>
+              <p className="text-xs text-earth-600">Emoji fallback</p>
+            </div>
+          </div>
+          <p className="text-sm text-earth-600">
+            Plant cards now show main photos in avatars when available, with emoji fallbacks.
+          </p>
         </div>
       </section>
 
