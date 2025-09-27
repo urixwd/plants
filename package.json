@@ -1,0 +1,49 @@
+{
+  "name": "plants",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "lint": "next lint",
+    "db:migrate": "dotenv -e .env bun run db/migration-scripts/migrate.ts",
+    "db:generate": "drizzle-kit generate:pg",
+    "db:studio": "drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "autoprefixer": "^10.4.21",
+    "dotenv": "^16.4.7",
+    "dotenv-cli": "^8.0.0",
+    "drizzle-kit": "0.30.4",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.5.6",
+    "postgres": "^3.4.5",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5",
+    "vitest": "^3.0.6"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.39.3",
+    "drizzle-zod": "^0.7.0",
+    "lucide-react": "^0.544.0",
+    "next": "14",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
